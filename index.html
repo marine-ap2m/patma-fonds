@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PATMA · Fonds</title>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+body { font-family:Arial, sans-serif; background:#F5F4F0; color:#1A1A1A; min-height:100vh; }
+
+/* GLOBAL */
+.global { background:#1C2B27; padding:20px 20px 0; position:sticky; top:0; z-index:50; }
+.global-title { color:#fff; font-size:15px; font-weight:700; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; }
+.global-title span { color:#E8916A; font-weight:300; }
+.g-save { font-size:10px; color:rgba(255,255,255,.35); font-weight:400; }
+.global-kpis { display:flex; flex-wrap:wrap; margin:0 -20px; }
+.gk { flex:1; min-width:20%; padding:0 14px 14px; }
+.gk-l { font-size:7.5px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:rgba(255,255,255,.4); margin-bottom:2px; }
+.gk-v { font-size:15px; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.gk-v.a { color:#E8916A; }
+.gk-v.g { color:#6FD494; }
+.gk-v.w { color:#F9D77A; }
+.gk-v.p { color:#C8A8F0; }
+.gbar { height:5px; background:rgba(255,255,255,.1); margin:0 -20px; }
+.gfill { height:100%; background:linear-gradient(90deg,#C85A25,#E8916A); transition:width .5s; }
+
+/* LOADING */
+.loading { text-align:center; padding:60px 20px; color:#999; font-size:14px; }
+.loading::after { content:''; display:block; width:32px; height:32px; border:3px solid #E0DCD2; border-top-color:#D4601C; border-radius:50%; margin:16px auto 0; animation:spin .7s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.err { background:#FEE2E2; color:#B91C1C; padding:16px 20px; border-radius:8px; margin:16px; font-size:13px; font-weight:600; }
+
+/* MAIN */
+.main { max-width:720px; margin:0 auto; padding:16px 14px 20px; }
+
+/* CATÉGORIE */
+.cat { margin-bottom:20px; background:#fff; border-radius:14px; overflow:hidden; box-shadow:0 2px 12px rgba(0,0,0,.07); }
+.cat-head { padding:14px 16px 12px; display:flex; align-items:center; gap:10px; }
+.cat-head.c1 { background:#FBF0E8; border-bottom:3px solid #D4601C; }
+.cat-head.c2 { background:#EAF1FC; border-bottom:3px solid #1F62B0; }
+.cat-head.c3 { background:#E5F4EC; border-bottom:3px solid #257A42; }
+.cat-dot { width:11px; height:11px; border-radius:50%; flex-shrink:0; }
+.cat-name { font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; flex:1; }
+.c1 .cat-name { color:#D4601C; }
+.c2 .cat-name { color:#1F62B0; }
+.c3 .cat-name { color:#257A42; }
+.cat-pct { font-size:22px; font-weight:700; }
+.c1 .cat-pct { color:#D4601C; }
+.c2 .cat-pct { color:#1F62B0; }
+.c3 .cat-pct { color:#257A42; }
+.cat-bar { height:7px; background:rgba(0,0,0,.07); }
+.cat-fill { height:100%; transition:width .5s; }
+.c1 .cat-fill { background:#D4601C; }
+.c2 .cat-fill { background:#1F62B0; }
+.c3 .cat-fill { background:#257A42; }
+.cat-totaux { padding:7px 16px; font-size:11px; color:#888; display:flex; justify-content:space-between; border-bottom:1px solid #F0EDE7; }
+
+/* LIGNE ENVELOPPE */
+.env-row { border-bottom:1px solid #F5F3EF; }
+.env-row:last-child { border-bottom:none; }
+.env-main { display:grid; grid-template-columns:1fr 110px 46px; gap:0 8px; align-items:center; padding:11px 14px; cursor:pointer; transition:background .12s; }
+.env-main:hover, .env-main:active { background:#FAFAF7; }
+.env-left { min-width:0; }
+.env-nom { font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:5px; }
+.env-bar { height:5px; background:#ECEAE4; border-radius:3px; overflow:hidden; }
+.env-fill { height:100%; border-radius:3px; transition:width .4s; }
+.cat-1 .env-fill { background:#D4601C; }
+.cat-2 .env-fill { background:#1F62B0; }
+.cat-3 .env-fill { background:#257A42; }
+.env-row.done .env-fill { background:#257A42; }
+.env-row.over .env-fill { background:#C01C1C; }
+.env-right { text-align:right; }
+.env-reste-l { font-size:8px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:#999; margin-bottom:1px; }
+.env-reste-v { font-size:13px; font-weight:700; }
+.cat-1 .env-reste-v { color:#D4601C; }
+.cat-2 .env-reste-v { color:#1F62B0; }
+.cat-3 .env-reste-v { color:#257A42; }
+.env-row.done .env-reste-v { color:#257A42; }
+.env-row.over .env-reste-v { color:#C01C1C; }
+.env-pp { font-size:9px; color:#AAA; text-align:center; font-weight:600; }
+.env-btn { width:38px; height:38px; border:none; border-radius:10px; font-size:22px; font-weight:300; cursor:pointer; transition:all .15s; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.cat-1 .env-btn { background:#FBF0E8; color:#D4601C; }
+.cat-1 .env-btn:hover, .cat-1 .env-btn.open { background:#D4601C; color:#fff; }
+.cat-2 .env-btn { background:#EAF1FC; color:#1F62B0; }
+.cat-2 .env-btn:hover, .cat-2 .env-btn.open { background:#1F62B0; color:#fff; }
+.cat-3 .env-btn { background:#E5F4EC; color:#257A42; }
+.cat-3 .env-btn:hover, .cat-3 .env-btn.open { background:#257A42; color:#fff; }
+
+/* FORMULAIRE INLINE */
+.env-form { display:none; padding:12px 14px 14px; background:#FAFAF7; border-top:1px solid #ECEAE4; }
+.env-form.on { display:block; }
+.ef-row { display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; }
+.ef-g { display:flex; flex-direction:column; gap:4px; }
+.ef-g.grow { flex:1; min-width:100px; }
+.ef-g.date { width:130px; }
+.ef-l { font-size:8.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#999; }
+.ef-i { padding:10px 12px; border:1.5px solid #DDD; border-radius:8px; font-family:Arial,sans-serif; font-size:14px; background:#fff; color:#1A1A1A; width:100%; transition:border-color .15s; }
+.ef-i:focus { outline:none; border-color:#888; }
+.ef-i::placeholder { color:#C0BDB8; }
+.ef-i[type=number] { font-size:16px; font-weight:700; }
+.ef-ok { padding:11px 18px; border:none; border-radius:8px; font-family:Arial,sans-serif; font-size:14px; font-weight:700; color:#fff; cursor:pointer; transition:all .15s; white-space:nowrap; flex-shrink:0; }
+.ef-ok:active { transform:scale(.96); }
+.cat-1 .ef-ok { background:#D4601C; }
+.cat-1 .ef-ok:hover { background:#B8501A; }
+.cat-2 .ef-ok { background:#1F62B0; }
+.cat-2 .ef-ok:hover { background:#164E8E; }
+.cat-3 .ef-ok { background:#257A42; }
+.cat-3 .ef-ok:hover { background:#1A5C32; }
+.ef-edit { margin-top:8px; }
+.ef-edit-btn { background:none; border:1px solid #DDD; border-radius:6px; padding:5px 10px; font-size:11px; font-weight:600; color:#888; cursor:pointer; font-family:Arial,sans-serif; }
+.ef-edit-btn:hover { border-color:#999; color:#333; }
+
+/* MODIFIER INLINE */
+.env-edit-form { display:none; padding:12px 14px 14px; background:#F0EDE7; border-top:1px solid #E0DCD2; }
+.env-edit-form.on { display:block; }
+.eef-title { font-size:11px; font-weight:700; color:#666; margin-bottom:10px; }
+.eef-row { display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; }
+.eef-g { display:flex; flex-direction:column; gap:4px; }
+.eef-l { font-size:8.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#999; }
+.eef-i { padding:9px 12px; border:1.5px solid #DDD; border-radius:7px; font-family:Arial,sans-serif; font-size:13px; background:#fff; color:#1A1A1A; width:100%; }
+.eef-i:focus { outline:none; border-color:#888; }
+select.eef-i { appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23999' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:28px; cursor:pointer; }
+.eef-btns { display:flex; gap:6px; margin-top:8px; }
+.eef-save { padding:9px 14px; border:none; border-radius:7px; background:#1A1A1A; color:#fff; font-family:Arial,sans-serif; font-size:13px; font-weight:700; cursor:pointer; }
+.eef-cancel { padding:9px 14px; border:1.5px solid #DDD; border-radius:7px; background:#fff; color:#555; font-family:Arial,sans-serif; font-size:13px; font-weight:600; cursor:pointer; }
+.eef-del { padding:9px 14px; border:none; border-radius:7px; background:#FEE2E2; color:#C01C1C; font-family:Arial,sans-serif; font-size:13px; font-weight:600; cursor:pointer; margin-left:auto; }
+
+/* BADGES */
+.bdg { font-size:8px; font-weight:700; padding:2px 6px; border-radius:4px; text-transform:uppercase; letter-spacing:.05em; vertical-align:middle; margin-left:4px; }
+.bd { background:#D1EDD9; color:#1A5C33; }
+.bo { background:#FEE2E2; color:#C01C1C; }
+
+/* HISTORIQUE */
+.hist-section { max-width:720px; margin:0 auto; padding:0 14px; }
+.hist-toggle { width:100%; padding:12px 16px; background:#fff; border:none; border-radius:10px; font-family:Arial,sans-serif; font-size:13px; font-weight:700; color:#555; cursor:pointer; text-align:left; box-shadow:0 2px 8px rgba(0,0,0,.06); display:flex; justify-content:space-between; align-items:center; }
+.hist-toggle:hover { background:#FAFAF7; }
+.hist-body { display:none; background:#fff; border-radius:0 0 10px 10px; margin-top:-4px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,.07); }
+.hist-body.on { display:block; }
+.hist-filters { padding:10px 14px; display:flex; gap:8px; border-bottom:1px solid #F0EDE7; flex-wrap:wrap; }
+.hf { font-family:Arial,sans-serif; font-size:11.5px; padding:5px 10px; border:1.5px solid #E0DCD2; border-radius:6px; background:#F5F4F0; color:#333; cursor:pointer; }
+.hist-scroll { max-height:320px; overflow-y:auto; }
+.htbl { width:100%; border-collapse:collapse; font-size:12px; }
+.htbl thead th { background:#F5F4F0; padding:8px 14px; text-align:left; font-size:8.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#888; border-bottom:1px solid #E8E5DE; position:sticky; top:0; }
+.htbl thead th.r { text-align:right; }
+.htbl tbody tr { border-bottom:1px solid #F5F3EF; }
+.htbl tbody tr:hover { background:#FAFAF7; }
+.htbl td { padding:9px 14px; }
+.htbl td.r { text-align:right; font-size:12px; font-weight:700; }
+.hcdot { display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:5px; vertical-align:middle; }
+.h-empty { padding:24px; text-align:center; color:#AAA; font-size:12px; font-style:italic; }
+.htyp { font-size:8px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:2px 5px; border-radius:3px; }
+.htd { background:#FBF0E8; color:#D4601C; }
+.htm { background:#EAF1FC; color:#1F62B0; }
+.hta { background:#E5F4EC; color:#257A42; }
+
+/* ACTIONS BAS */
+.bottom-actions { max-width:720px; margin:0 auto; padding:10px 14px 32px; display:flex; gap:8px; flex-wrap:wrap; }
+.ba-btn { padding:10px 16px; border-radius:8px; font-family:Arial,sans-serif; font-size:12px; font-weight:700; cursor:pointer; border:1.5px solid #DDD; background:#fff; color:#555; transition:all .15s; }
+.ba-btn:hover { background:#F5F4F0; }
+.ba-btn.danger { background:#FEE2E2; color:#C01C1C; border-color:#FECACA; }
+
+/* TOAST */
+.toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#1C2B27; color:#fff; padding:11px 22px; border-radius:10px; font-size:13px; font-weight:700; z-index:999; display:none; box-shadow:0 6px 28px rgba(0,0,0,.22); border-left:4px solid #6FD494; white-space:nowrap; }
+.toast.on { display:block; animation:tin .2s ease; }
+@keyframes tin { from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translateX(-50%)} }
+</style>
+</head>
+<body>
+
+<!-- GLOBAL -->
+<div class="global">
+  <div class="global-title">
+    PATMA <span>&nbsp;·&nbsp;</span> Suivi Déblocage Fonds
+    <span class="g-save" id="gSave"></span>
+  </div>
+  <div class="global-kpis">
+    <div class="gk"><div class="gk-l">Crédit signé</div><div class="gk-v" id="kC">—</div></div>
+    <div class="gk"><div class="gk-l">Débloqué</div><div class="gk-v a" id="kD">—</div></div>
+    <div class="gk"><div class="gk-l">Reste crédit</div><div class="gk-v w" id="kR">—</div></div>
+    <div class="gk"><div class="gk-l">Avancement</div><div class="gk-v g" id="kP">—</div></div>
+    <div class="gk"><div class="gk-l">Reste tréso perso</div><div class="gk-v p" id="kTP">—</div></div>
+  </div>
+  <div class="gbar"><div class="gfill" id="gf" style="width:0%"></div></div>
+</div>
+
+<!-- MAIN -->
+<div class="main" id="main"><div class="loading">Chargement des données</div></div>
+
+<!-- HISTORIQUE -->
+<div class="hist-section">
+  <button class="hist-toggle" onclick="toggleHist()">
+    <span>Historique des mouvements</span>
+    <span id="histArrow">▾</span>
+  </button>
+  <div class="hist-body" id="histBody">
+    <div class="hist-filters">
+      <select class="hf" id="hfCat" onchange="rHist()">
+        <option value="0">Toutes catégories</option>
+        <option value="1">Construction</option>
+        <option value="2">Frais annexes</option>
+        <option value="3">Fonds perso</option>
+      </select>
+      <select class="hf" id="hfTyp" onchange="rHist()">
+        <option value="">Tous types</option>
+        <option value="deb">Déblocages</option>
+        <option value="mod">Modifications</option>
+      </select>
+      <span id="hCnt" style="font-size:11px;color:#999;display:flex;align-items:center">—</span>
+    </div>
+    <div class="hist-scroll">
+      <table class="htbl">
+        <thead><tr>
+          <th>Date</th><th>Enveloppe</th><th>Catégorie</th><th>Type</th><th class="r">Montant</th><th>Libellé</th>
+        </tr></thead>
+        <tbody id="hBody"></tbody>
+      </table>
+      <div class="h-empty" id="hEmp">Aucun mouvement enregistré.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ACTIONS -->
+<div class="bottom-actions">
+  <button class="ba-btn" onclick="openAddEnv()">+ Nouvelle enveloppe</button>
+  <button class="ba-btn" onclick="doCSV()">↓ Export CSV</button>
+  <button class="ba-btn danger" onclick="doReset()">Réinitialiser</button>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── SUPABASE CONFIG ─────────────────────────────────
+var SB_URL = "https://khsxciivrgwjvhdsbjpy.supabase.co";
+var SB_KEY = "REMPLACER_PAR_ANON_KEY"; // → Dashboard Supabase → Settings → API → anon key
+
+var CREDIT = 224265.51;
+var CATS = {
+  1:{ nom:"Construction",            hex:"#D4601C", bg:"#FBF0E8" },
+  2:{ nom:"Frais annexes",           hex:"#1F62B0", bg:"#EAF1FC" },
+  3:{ nom:"Fonds perso à récupérer", hex:"#257A42", bg:"#E5F4EC" }
+};
+
+var DEFAUT = [
+  { nom:"CONSTRUCTION",                    ht:97363.20,  ttc:127234.34, deb:74340.60,  cat:1 },
+  { nom:"ASSURANCE DO",                    ht:2336.72,   ttc:2337.00,   deb:2329.26,   cat:1 },
+  { nom:"ARCHITECTE",                      ht:1060.00,   ttc:1060.00,   deb:1060.00,   cat:1 },
+  { nom:"VIABILISATION",                   ht:3127.15,   ttc:3752.58,   deb:3752.58,   cat:1 },
+  { nom:"TAXE TMO",                        ht:4166.67,   ttc:5000.00,   deb:0,         cat:1 },
+  { nom:"COMPTEURS",                       ht:0,         ttc:0,         deb:0,         cat:1 },
+  { nom:"HYDROGÉOLOGIQUE",                 ht:916.67,    ttc:1100.00,   deb:0,         cat:1 },
+  { nom:"VRD - TERRASSIER",               ht:5784.00,   ttc:6940.80,   deb:2638.00,   cat:1 },
+  { nom:"TERRASSIER EVACUATION",           ht:1540.00,   ttc:1848.00,   deb:1848.00,   cat:1 },
+  { nom:"PR TECH CLIM PEINTURE CARRELAGE", ht:8333.33,   ttc:10000.00,  deb:0,         cat:1 },
+  { nom:"AIRTON",                          ht:2500.00,   ttc:3000.00,   deb:0,         cat:1 },
+  { nom:"BRICO DEPOT",                     ht:6666.67,   ttc:8000.00,   deb:0,         cat:1 },
+  { nom:"ESCALIER",                        ht:833.33,    ttc:1000.00,   deb:0,         cat:1 },
+  { nom:"GÉOMÈTRE",                        ht:1200.00,   ttc:1440.00,   deb:1440.00,   cat:1 },
+  { nom:"PIERREUX",                        ht:8166.67,   ttc:9800.00,   deb:9800.00,   cat:1 },
+  { nom:"SOLDE ENVELOPPE PIERREUX",        ht:7485.83,   ttc:8983.00,   deb:0,         cat:1 },
+  { nom:"MACON RETRAIT TERRE",             ht:4500.00,   ttc:5400.00,   deb:5400.00,   cat:1 },
+  { nom:"CLOTURE MITOYENNE",               ht:2100.00,   ttc:2520.00,   deb:2016.00,   cat:1 },
+  { nom:"RAPPORT COMMISSAIRE",             ht:1080.00,   ttc:1296.00,   deb:1296.00,   cat:2 },
+  { nom:"COMPTABLE",                       ht:2220.00,   ttc:2664.00,   deb:2993.56,   cat:2 },
+  { nom:"HUISSIER",                        ht:330.00,    ttc:330.00,    deb:330.00,    cat:2 },
+  { nom:"AP2M - DOSSIER",                  ht:3000.00,   ttc:3000.00,   deb:3000.00,   cat:2 },
+  { nom:"LOYER 6 MOIS CRÉDIT 2026",        ht:6666.67,   ttc:8000.00,   deb:8000.00,   cat:3 },
+  { nom:"PR TECH OUVERTURE CHANTIER",      ht:9500.00,   ttc:9500.00,   deb:9500.00,   cat:3 }
+];
+
+// ─── STATE ───────────────────────────────────────────
+var S = { envs:[], log:[] };
+var openForms = {};
+var histOpen  = false;
+
+// ─── SUPABASE API ────────────────────────────────────
+function sbHeaders() {
+  return { "Content-Type":"application/json", "apikey":SB_KEY, "Authorization":"Bearer "+SB_KEY, "Prefer":"return=representation" };
+}
+
+async function sbGet(table, params) {
+  params = params || "";
+  var r = await fetch(SB_URL+"/rest/v1/"+table+params, { headers:sbHeaders() });
+  if (!r.ok) throw new Error("Erreur GET "+table+" : "+r.status);
+  return r.json();
+}
+
+async function sbPost(table, body) {
+  var r = await fetch(SB_URL+"/rest/v1/"+table, { method:"POST", headers:sbHeaders(), body:JSON.stringify(body) });
+  if (!r.ok) throw new Error("Erreur POST "+table+" : "+r.status);
+  return r.json();
+}
+
+async function sbPatch(table, id, body) {
+  var r = await fetch(SB_URL+"/rest/v1/"+table+"?id=eq."+id, { method:"PATCH", headers:sbHeaders(), body:JSON.stringify(body) });
+  if (!r.ok) throw new Error("Erreur PATCH "+table+" : "+r.status);
+  return r.json();
+}
+
+async function sbDelete(table, id) {
+  var r = await fetch(SB_URL+"/rest/v1/"+table+"?id=eq."+id, { method:"DELETE", headers:sbHeaders() });
+  if (!r.ok) throw new Error("Erreur DELETE "+table+" : "+r.status);
+}
+
+// ─── INITIALISATION ──────────────────────────────────
+async function init() {
+  try {
+    var envs = await sbGet("patma_enveloppes", "?order=id");
+    if (!envs || envs.length === 0) {
+      // Première ouverture : insérer les données par défaut
+      setSave("Initialisation...");
+      envs = await sbPost("patma_enveloppes", DEFAUT);
+    }
+    S.envs = envs;
+
+    var logs = await sbGet("patma_log", "?order=created_at");
+    S.log = logs || [];
+
+    render();
+    setSave("Chargé");
+  } catch(e) {
+    document.getElementById("main").innerHTML = "<div class='err'>Erreur de connexion Supabase.<br>Vérifier la clé API dans le fichier (SB_KEY).<br><small>"+e.message+"</small></div>";
+  }
+}
+
+// ─── FORMAT ──────────────────────────────────────────
+function f(v, dec) {
+  if (v===null||v===undefined||isNaN(v)) return "—";
+  return new Intl.NumberFormat("fr-FR", { style:"currency", currency:"EUR", maximumFractionDigits:dec===undefined?0:dec }).format(v);
+}
+function pct(d,t) { return (!t||t===0)?0:Math.round(d/t*100); }
+function stEnv(e) { var p=pct(e.deb,e.ttc); if(p<=0)return"zero"; if(p>100)return"over"; if(p>=100)return"done"; return"ok"; }
+function setSave(msg) { document.getElementById("gSave").textContent=msg; }
+
+// ─── RENDER KPI ──────────────────────────────────────
+function rKPI() {
+  var td = S.envs.reduce(function(a,e){ return a+(e.deb||0); }, 0);
+  var pp = CREDIT>0?(td/CREDIT*100):0;
+
+  // Reste tréso perso = Cat 3 TTC - Cat 3 débloqué
+  var c3envs = S.envs.filter(function(e){ return e.cat===3; });
+  var c3ttc  = c3envs.reduce(function(a,e){ return a+(e.ttc||0); }, 0);
+  var c3deb  = c3envs.reduce(function(a,e){ return a+(e.deb||0); }, 0);
+  var tresoPers = c3ttc - c3deb;
+
+  document.getElementById("kC").textContent  = f(CREDIT);
+  document.getElementById("kD").textContent  = f(td);
+  document.getElementById("kR").textContent  = f(CREDIT-td);
+  document.getElementById("kP").textContent  = Math.round(pp)+"%";
+  document.getElementById("kTP").textContent = f(tresoPers);
+  document.getElementById("gf").style.width  = Math.min(pp,100)+"%";
+}
+
+// ─── RENDER MAIN ─────────────────────────────────────
+function rMain() {
+  var html = "";
+  [1,2,3].forEach(function(c) {
+    var ces = S.envs.filter(function(e){ return e.cat===c; });
+    var ct  = ces.reduce(function(a,e){ return a+(e.ttc||0); },0);
+    var cd  = ces.reduce(function(a,e){ return a+(e.deb||0); },0);
+    var cp  = pct(cd,ct);
+
+    html += "<div class='cat c"+c+"'>";
+    html += "<div class='cat-head c"+c+"'>";
+    html += "<div class='cat-dot' style='background:"+CATS[c].hex+"'></div>";
+    html += "<div class='cat-name'>"+CATS[c].nom+"</div>";
+    html += "<div class='cat-pct'>"+cp+"%</div>";
+    html += "</div>";
+    html += "<div class='cat-bar'><div class='cat-fill' style='width:"+Math.min(cp,100)+"%'></div></div>";
+    html += "<div class='cat-totaux'><span>"+f(cd)+" débloqué</span><span>"+f(ct-cd)+" restant</span></div>";
+
+    ces.forEach(function(e) {
+      var r = (e.ttc||0)-(e.deb||0);
+      var p = pct(e.deb,e.ttc);
+      var s = stEnv(e);
+      var bw = Math.min(Math.abs(p),100);
+      var badge = s==="done"?"<span class='bdg bd'>Soldé</span>":s==="over"?"<span class='bdg bo'>Dépassé</span>":"";
+      var rowCls = "env-row cat-"+c+(s==="done"?" done":"")+(s==="over"?" over":"");
+      var debOpen  = openForms[e.id]==="deb";
+      var editOpen = openForms[e.id]==="edit";
+      var today    = new Date().toISOString().split("T")[0];
+
+      html += "<div class='"+rowCls+"' id='row-"+e.id+"'>";
+
+      // Ligne principale
+      html += "<div class='env-main' onclick='toggleDeb("+e.id+")'>";
+      html += "<div class='env-left'>";
+      html += "<div class='env-nom'>"+e.nom+badge+"</div>";
+      html += "<div class='env-bar'><div class='env-fill' style='width:"+bw+"%'></div></div>";
+      html += "</div>";
+      html += "<div class='env-right'><div class='env-reste-l'>Reste</div><div class='env-reste-v'>"+f(r)+"</div><div class='env-pp'>"+p+"%</div></div>";
+      html += "<button class='env-btn"+(debOpen?" open":"")+"' onclick='toggleDeb("+e.id+");event.stopPropagation()' title='Débloquer'>+</button>";
+      html += "</div>";
+
+      // Formulaire déblocage inline
+      html += "<div class='env-form"+(debOpen?" on":"")+"' id='form-"+e.id+"'>";
+      html += "<div class='ef-row'>";
+      html += "<div class='ef-g date'><div class='ef-l'>Date</div><input type='date' class='ef-i' id='di-"+e.id+"' value='"+today+"'></div>";
+      html += "<div class='ef-g grow'><div class='ef-l'>Montant TTC (€)</div><input type='number' class='ef-i' id='ai-"+e.id+"' step='0.01' min='0' placeholder='0,00' onkeydown='if(event.key===\"Enter\")doDeb("+e.id+")'></div>";
+      html += "<div class='ef-g grow'><div class='ef-l'>Libellé <span style='font-size:8px;font-weight:400;text-transform:none;letter-spacing:0'>opt.</span></div><input type='text' class='ef-i' id='li-"+e.id+"' placeholder='Facture...' onkeydown='if(event.key===\"Enter\")doDeb("+e.id+")'></div>";
+      html += "<button class='ef-ok' onclick='doDeb("+e.id+")'>Débloquer</button>";
+      html += "</div>";
+      html += "<div class='ef-edit'><button class='ef-edit-btn' onclick='toggleEdit("+e.id+");event.stopPropagation()'>✎ Modifier l'enveloppe</button></div>";
+      html += "</div>";
+
+      // Formulaire modification inline
+      html += "<div class='env-edit-form"+(editOpen?" on":"")+"' id='edit-"+e.id+"'>";
+      html += "<div class='eef-title'>Modifier : "+e.nom+"</div>";
+      html += "<div class='eef-row'>";
+      html += "<div class='eef-g'><div class='eef-l'>Désignation</div><input type='text' class='eef-i' id='en-"+e.id+"' value='"+e.nom+"'></div>";
+      html += "<div class='eef-g'><div class='eef-l'>TTC (€)</div><input type='number' class='eef-i' id='et-"+e.id+"' value='"+(e.ttc||"")+"' step='0.01'></div>";
+      html += "<div class='eef-g'><div class='eef-l'>HT (€) <span style='font-size:8px;font-weight:400;text-transform:none;letter-spacing:0'>opt.</span></div><input type='number' class='eef-i' id='eh-"+e.id+"' value='"+(e.ht||"")+"' step='0.01'></div>";
+      html += "<div class='eef-g'><div class='eef-l'>Catégorie</div><select class='eef-i' id='ec-"+e.id+"'>";
+      html += "<option value='1'"+(e.cat===1?" selected":"")+">Construction</option>";
+      html += "<option value='2'"+(e.cat===2?" selected":"")+">Frais annexes</option>";
+      html += "<option value='3'"+(e.cat===3?" selected":"")+">Fonds perso</option>";
+      html += "</select></div>";
+      html += "<div class='eef-g'><div class='eef-l'>Débloqué (€) <span style='font-size:8px;font-weight:400;text-transform:none;letter-spacing:0'>correction</span></div><input type='number' class='eef-i' id='ed-"+e.id+"' value='"+(e.deb||0)+"' step='0.01'></div>";
+      html += "<div class='eef-g'><div class='eef-l'>Motif</div><input type='text' class='eef-i' id='em-"+e.id+"' placeholder='Raison...'></div>";
+      html += "</div>";
+      html += "<div class='eef-btns'>";
+      html += "<button class='eef-save' onclick='doEdit("+e.id+")'>Enregistrer</button>";
+      html += "<button class='eef-cancel' onclick='toggleEdit("+e.id+")'>Annuler</button>";
+      html += "<button class='eef-del' onclick='doDelete("+e.id+")'>Supprimer</button>";
+      html += "</div></div>";
+
+      html += "</div>"; // env-row
+    });
+    html += "</div>"; // cat
+  });
+
+  document.getElementById("main").innerHTML = html;
+
+  // Auto-focus
+  Object.keys(openForms).forEach(function(id) {
+    if (openForms[id]==="deb") {
+      var inp = document.getElementById("ai-"+id);
+      if (inp) setTimeout(function(){ inp.focus(); }, 80);
+    }
+  });
+}
+
+function render() { rKPI(); rMain(); }
+
+// ─── TOGGLE FORMS ────────────────────────────────────
+function toggleDeb(id) {
+  var cur = openForms[id];
+  openForms = {};
+  openForms[id] = (cur==="deb") ? null : "deb";
+  render();
+}
+function toggleEdit(id) {
+  var cur = openForms[id];
+  openForms = {};
+  openForms[id] = (cur==="edit") ? null : "edit";
+  render();
+}
+
+// ─── DÉBLOQUER ───────────────────────────────────────
+async function doDeb(id) {
+  var a = parseFloat(document.getElementById("ai-"+id).value);
+  var d = document.getElementById("di-"+id).value;
+  var l = document.getElementById("li-"+id).value.trim();
+  if (!a||a<=0) { document.getElementById("ai-"+id).focus(); return; }
+  if (!d) { alert("Date requise."); return; }
+  var e = S.envs.find(function(x){ return x.id===id; });
+  if (!e) return;
+
+  setSave("Sauvegarde...");
+  try {
+    var newDeb = (e.deb||0) + a;
+    await sbPatch("patma_enveloppes", id, { deb: newDeb });
+    await sbPost("patma_log", { type:"deb", nom:e.nom, montant:a, date:d, libelle:l, cat:e.cat });
+    e.deb = newDeb;
+    S.log.push({ type:"deb", nom:e.nom, montant:a, date:d, libelle:l, cat:e.cat });
+    openForms = {};
+    render();
+    setSave("Sauvegardé ✓");
+    showToast("✓  "+f(a,2)+" débloques sur "+e.nom);
+  } catch(err) {
+    setSave("Erreur !");
+    alert("Erreur Supabase : "+err.message);
+  }
+}
+
+// ─── MODIFIER ────────────────────────────────────────
+async function doEdit(id) {
+  var e = S.envs.find(function(x){ return x.id===id; });
+  if (!e) return;
+  var nom   = document.getElementById("en-"+id).value.trim().toUpperCase();
+  var ttc   = parseFloat(document.getElementById("et-"+id).value);
+  var htR   = parseFloat(document.getElementById("eh-"+id).value);
+  var cat   = parseInt(document.getElementById("ec-"+id).value);
+  var debR  = parseFloat(document.getElementById("ed-"+id).value);
+  var motif = document.getElementById("em-"+id).value.trim();
+  if (!nom) { alert("Désignation requise."); return; }
+  if (isNaN(ttc)||ttc<0) { alert("Montant TTC invalide."); return; }
+
+  setSave("Sauvegarde...");
+  try {
+    var body = { nom:nom, ttc:ttc, cat:cat };
+    if (!isNaN(htR))  body.ht  = htR;
+    if (!isNaN(debR)) body.deb = debR;
+    await sbPatch("patma_enveloppes", id, body);
+    var logEntry = { type:"mod", nom:nom, montant:ttc-(e.ttc||0), cat:cat, date:new Date().toISOString().split("T")[0], libelle:motif||("Enveloppe : "+f(e.ttc,2)+" → "+f(ttc,2)) };
+    await sbPost("patma_log", logEntry);
+    Object.assign(e, body);
+    S.log.push(logEntry);
+    openForms = {};
+    render();
+    setSave("Sauvegardé ✓");
+    showToast("Enveloppe mise à jour.");
+  } catch(err) {
+    setSave("Erreur !");
+    alert("Erreur Supabase : "+err.message);
+  }
+}
+
+// ─── SUPPRIMER ───────────────────────────────────────
+async function doDelete(id) {
+  var e = S.envs.find(function(x){ return x.id===id; });
+  if (!e) return;
+  if (!confirm("Supprimer \""+e.nom+"\" ? Irréversible.")) return;
+  setSave("Suppression...");
+  try {
+    await sbDelete("patma_enveloppes", id);
+    S.envs = S.envs.filter(function(x){ return x.id!==id; });
+    openForms = {};
+    render();
+    setSave("Sauvegardé ✓");
+  } catch(err) {
+    setSave("Erreur !");
+    alert("Erreur Supabase : "+err.message);
+  }
+}
+
+// ─── AJOUTER ─────────────────────────────────────────
+async function openAddEnv() {
+  var nom = prompt("Nom de l'enveloppe :"); if (!nom||!nom.trim()) return;
+  var ttcS = prompt("Montant TTC (€) :"); if (!ttcS) return;
+  var ttc = parseFloat(ttcS.replace(",","."));
+  if (isNaN(ttc)||ttc<0) { alert("Montant invalide."); return; }
+  var catS = prompt("Catégorie (1=Construction, 2=Frais annexes, 3=Fonds perso) :","1");
+  var cat = parseInt(catS)||1; if (cat<1||cat>3) cat=1;
+  setSave("Sauvegarde...");
+  try {
+    var result = await sbPost("patma_enveloppes", [{ nom:nom.trim().toUpperCase(), ht:0, ttc:ttc, deb:0, cat:cat }]);
+    S.envs.push(result[0]);
+    await sbPost("patma_log", { type:"add", nom:nom.trim().toUpperCase(), montant:ttc, date:new Date().toISOString().split("T")[0], libelle:"Nouvelle enveloppe", cat:cat });
+    render();
+    setSave("Sauvegardé ✓");
+  } catch(err) {
+    setSave("Erreur !");
+    alert("Erreur Supabase : "+err.message);
+  }
+}
+
+// ─── HISTORIQUE ──────────────────────────────────────
+function toggleHist() {
+  histOpen = !histOpen;
+  document.getElementById("histBody").classList.toggle("on", histOpen);
+  document.getElementById("histArrow").textContent = histOpen ? "▴" : "▾";
+  if (histOpen) rHist();
+}
+
+function rHist() {
+  var fc = parseInt(document.getElementById("hfCat").value)||0;
+  var ft = document.getElementById("hfTyp").value;
+  var rows = S.log.slice().reverse().filter(function(mv){
+    if (fc && (mv.cat||1)!==fc) return false;
+    if (ft && mv.type!==ft) return false;
+    return true;
+  });
+  document.getElementById("hCnt").textContent = rows.length+" mouvement"+(rows.length>1?"s":"");
+  var emp  = document.getElementById("hEmp");
+  var body = document.getElementById("hBody");
+  if (!rows.length) { emp.style.display="block"; body.innerHTML=""; return; }
+  emp.style.display="none";
+  body.innerHTML = rows.map(function(mv) {
+    var cat  = mv.cat||1; var hex = CATS[cat].hex;
+    var tl   = mv.type==="deb"?"Déblocage":mv.type==="add"?"Ajout":"Modification";
+    var tcls = mv.type==="deb"?"htd":mv.type==="add"?"hta":"htm";
+    var mfmt = mv.type==="mod" ? ((mv.montant>=0?"+":"")+f(mv.montant,2)) : f(mv.montant,2);
+    return "<tr><td style='font-size:11px'>"+(mv.date||mv.created_at||"").substring(0,10)+"</td><td style='font-weight:600'>"+mv.nom+"</td><td><span class='hcdot' style='background:"+hex+"'></span>"+CATS[cat].nom+"</td><td><span class='htyp "+tcls+"'>"+tl+"</span></td><td class='r'>"+mfmt+"</td><td style='color:#888;font-size:11px'>"+(mv.libelle||"—")+"</td></tr>";
+  }).join("");
+}
+
+// ─── EXPORT CSV ──────────────────────────────────────
+function doCSV() {
+  var h = ["Catégorie","Désignation","HT","TTC","Débloqué","Reste","%"].join(";");
+  var rows = S.envs.map(function(e) {
+    var r = (e.ttc||0)-(e.deb||0);
+    var pp = (e.ttc&&e.ttc>0)?Math.round(e.deb/e.ttc*100):0;
+    return [CATS[e.cat||1].nom, e.nom, (e.ht||0).toFixed(2).replace(".",","), (e.ttc||0).toFixed(2).replace(".",","), (e.deb||0).toFixed(2).replace(".",","), r.toFixed(2).replace(".",","), pp+"%"].join(";");
+  });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["\uFEFF"+[h].concat(rows).join("\n")], {type:"text/csv;charset=utf-8;"}));
+  a.download = "PATMA_"+new Date().toISOString().split("T")[0]+".csv";
+  a.click();
+}
+
+// ─── RESET ───────────────────────────────────────────
+async function doReset() {
+  if (!confirm("Réinitialiser toutes les données Supabase ? IRRÉVERSIBLE.")) return;
+  setSave("Réinitialisation...");
+  try {
+    // Supprimer toutes les lignes
+    await fetch(SB_URL+"/rest/v1/patma_enveloppes?id=gte.0", { method:"DELETE", headers:sbHeaders() });
+    await fetch(SB_URL+"/rest/v1/patma_log?id=gte.0",        { method:"DELETE", headers:sbHeaders() });
+    // Réinsérer les défauts
+    var envs = await sbPost("patma_enveloppes", DEFAUT);
+    S.envs = envs; S.log = [];
+    openForms = {};
+    render();
+    setSave("Réinitialisé ✓");
+  } catch(err) {
+    setSave("Erreur !");
+    alert("Erreur Supabase : "+err.message);
+  }
+}
+
+// ─── TOAST ───────────────────────────────────────────
+function showToast(msg) {
+  var t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast on";
+  setTimeout(function(){ t.className = "toast"; }, 3000);
+}
+
+// ─── INIT ────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
