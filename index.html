@@ -9,20 +9,32 @@
 body { font-family:Arial, sans-serif; background:#F5F4F0; color:#1A1A1A; min-height:100vh; }
 
 /* GLOBAL */
-.global { background:#1C2B27; padding:20px 20px 0; position:sticky; top:0; z-index:50; }
-.global-title { color:#fff; font-size:15px; font-weight:700; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; }
+.global { background:#1C2B27; padding:18px 20px 18px; position:sticky; top:0; z-index:50; }
+.global-title { color:#fff; font-size:15px; font-weight:700; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px; }
 .global-title span { color:#E8916A; font-weight:300; }
 .g-save { font-size:10px; color:rgba(255,255,255,.35); font-weight:400; }
-.global-kpis { display:flex; flex-wrap:wrap; margin:0 -20px; }
-.gk { flex:1; min-width:20%; padding:0 14px 14px; }
-.gk-l { font-size:7.5px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:rgba(255,255,255,.4); margin-bottom:2px; }
-.gk-v { font-size:15px; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.gk-v.a { color:#E8916A; }
-.gk-v.g { color:#6FD494; }
-.gk-v.w { color:#F9D77A; }
-.gk-v.p { color:#C8A8F0; }
-.gbar { height:5px; background:rgba(255,255,255,.1); margin:0 -20px; }
-.gfill { height:100%; background:linear-gradient(90deg,#C85A25,#E8916A); transition:width .5s; }
+
+/* HERO KPI */
+.g-hero { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin-bottom:11px; }
+.g-hero-l { font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:rgba(255,255,255,.5); margin-bottom:4px; }
+.g-hero-v { font-size:28px; font-weight:800; color:#fff; line-height:1; letter-spacing:-.01em; white-space:nowrap; }
+.g-hero-sub { font-size:11px; color:rgba(255,255,255,.5); margin-top:6px; }
+.g-hero-sub b { color:rgba(255,255,255,.82); font-weight:700; }
+.g-hero-pct { text-align:right; flex-shrink:0; }
+.g-hero-pct-v { font-size:34px; font-weight:800; color:#6FD494; line-height:1; }
+.g-hero-pct-l { font-size:9px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:rgba(255,255,255,.4); margin-top:3px; }
+
+/* PROGRESS BAR */
+.gbar { height:10px; background:rgba(255,255,255,.12); border-radius:6px; overflow:hidden; }
+.gfill { height:100%; background:linear-gradient(90deg,#C85A25,#E8916A); border-radius:6px; transition:width .5s; }
+
+/* SECONDARY KPI */
+.g-stats { display:flex; gap:10px; margin-top:13px; }
+.g-stat { flex:1; min-width:0; background:rgba(255,255,255,.06); border-radius:10px; padding:9px 12px; }
+.g-stat-l { font-size:9px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:rgba(255,255,255,.45); margin-bottom:4px; }
+.g-stat-v { font-size:17px; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.g-stat-v.w { color:#F9D77A; }
+.g-stat-v.p { color:#C8A8F0; }
 
 /* LOADING */
 .loading { text-align:center; padding:60px 20px; color:#999; font-size:14px; }
@@ -235,14 +247,22 @@ body.role-viewer .viewer-only { display:block; }
     <span class="who" id="who"></span>
     <span class="g-save" id="gSave"></span>
   </div>
-  <div class="global-kpis">
-    <div class="gk"><div class="gk-l">Crédit signé</div><div class="gk-v" id="kC">—</div></div>
-    <div class="gk"><div class="gk-l">Débloqué</div><div class="gk-v a" id="kD">—</div></div>
-    <div class="gk"><div class="gk-l">Reste crédit</div><div class="gk-v w" id="kR">—</div></div>
-    <div class="gk"><div class="gk-l">Avancement</div><div class="gk-v g" id="kP">—</div></div>
-    <div class="gk"><div class="gk-l">Reste tréso perso</div><div class="gk-v p" id="kTP">—</div></div>
+  <div class="g-hero">
+    <div>
+      <div class="g-hero-l">Total débloqué</div>
+      <div class="g-hero-v" id="kD">—</div>
+      <div class="g-hero-sub">sur <b id="kC">—</b> de crédit signé</div>
+    </div>
+    <div class="g-hero-pct">
+      <div class="g-hero-pct-v" id="kP">—</div>
+      <div class="g-hero-pct-l">Avancement</div>
+    </div>
   </div>
   <div class="gbar"><div class="gfill" id="gf" style="width:0%"></div></div>
+  <div class="g-stats">
+    <div class="g-stat"><div class="g-stat-l">Reste crédit</div><div class="g-stat-v w" id="kR">—</div></div>
+    <div class="g-stat"><div class="g-stat-l">Reste tréso perso</div><div class="g-stat-v p" id="kTP">—</div></div>
+  </div>
 </div>
 
 <!-- MAIN -->
@@ -595,7 +615,7 @@ async function doDeb(id) {
     openForms = {};
     render();
     setSave("Sauvegardé ✓");
-    showToast("✓  "+f(a,2)+" débloques sur "+e.nom);
+    showToast("✓  "+f(a,2)+" débloqués sur "+e.nom);
   } catch(err) {
     setSave("Erreur !");
     alert("Erreur Supabase : "+err.message);
