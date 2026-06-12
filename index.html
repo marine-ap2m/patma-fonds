@@ -219,6 +219,28 @@ body.role-viewer .viewer-only { display:block; }
 .note-send { margin-top:8px; padding:9px 16px; border:none; border-radius:8px; background:#1F62B0; color:#fff; font-family:Arial,sans-serif; font-size:13px; font-weight:700; cursor:pointer; }
 .note-send:hover { background:#164E8E; }
 .htn { background:#EAF1FC; color:#1F62B0; }
+
+/* SAISIE DÉBLOCAGE BANQUE */
+.bankbox { max-width:720px; margin:14px auto 0; padding:0 14px; }
+.bank-toggle { width:100%; padding:13px 16px; background:#1C2B27; border:none; border-radius:11px; font-family:Arial,sans-serif; font-size:14px; font-weight:700; color:#fff; cursor:pointer; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 10px rgba(0,0,0,.12); }
+.bank-toggle:hover { background:#24463C; }
+.bank-body { display:none; background:#fff; border-radius:0 0 12px 12px; margin-top:-4px; padding:16px; box-shadow:0 4px 14px rgba(0,0,0,.08); }
+.bank-body.on { display:block; }
+.bank-sync { padding-bottom:14px; margin-bottom:14px; border-bottom:1px dashed #E0DCD2; }
+.bank-l { font-size:9px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#999; margin-bottom:5px; }
+.bank-hint { font-size:8px; font-weight:400; text-transform:none; letter-spacing:0; color:#BBB; }
+.bank-sync-row { display:flex; gap:8px; }
+.bank-i { padding:10px 12px; border:1.5px solid #DDD; border-radius:8px; font-family:Arial,sans-serif; font-size:14px; background:#fff; color:#1A1A1A; width:100%; }
+.bank-i:focus { outline:none; border-color:#1C2B27; }
+.bank-sync-btn { padding:10px 16px; border:none; border-radius:8px; background:#257A42; color:#fff; font-family:Arial,sans-serif; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap; flex-shrink:0; }
+.bank-sync-btn:hover { background:#1A5C32; }
+.bank-fields { display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; }
+.bank-g { display:flex; flex-direction:column; }
+.bank-g.grow { flex:1; min-width:130px; }
+.bank-g.date { width:140px; }
+.bank-ok { padding:11px 18px; border:none; border-radius:8px; background:#D4601C; color:#fff; font-family:Arial,sans-serif; font-size:14px; font-weight:700; cursor:pointer; white-space:nowrap; }
+.bank-ok:hover { background:#B8501A; }
+select.bank-i { appearance:none; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -250,21 +272,44 @@ body.role-viewer .viewer-only { display:block; }
   </div>
   <div class="g-hero">
     <div>
-      <div class="g-hero-l">Crédit consommé</div>
-      <div class="g-hero-v" id="kD">—</div>
-      <div class="g-hero-sub">sur <b id="kC">—</b> de crédit signé</div>
+      <div class="g-hero-l">Débloqué par la banque</div>
+      <div class="g-hero-v" id="kDB">—</div>
+      <div class="g-hero-sub">reste <b id="kRD">—</b> à débloquer · crédit <b id="kC">—</b></div>
     </div>
     <div class="g-hero-pct">
       <div class="g-hero-pct-v" id="kP">—</div>
-      <div class="g-hero-pct-l">Conso crédit</div>
+      <div class="g-hero-pct-l">du crédit</div>
     </div>
   </div>
   <div class="gbar"><div class="gfill" id="gf" style="width:0%"></div></div>
   <div class="g-stats">
-    <div class="g-stat"><div class="g-stat-l">Débloqué banque</div><div class="g-stat-v" id="kDB">—</div></div>
-    <div class="g-stat"><div class="g-stat-l">Reste à débloquer</div><div class="g-stat-v g" id="kRD">—</div></div>
+    <div class="g-stat"><div class="g-stat-l">Saisi dans l'outil</div><div class="g-stat-v" id="kS">—</div></div>
     <div class="g-stat"><div class="g-stat-l">Écart à ventiler</div><div class="g-stat-v w" id="kEC">—</div></div>
     <div class="g-stat"><div class="g-stat-l">Fonds perso engagés</div><div class="g-stat-v p" id="kFP">—</div></div>
+  </div>
+</div>
+
+<!-- SAISIE DÉBLOCAGE BANQUE (admin) -->
+<div class="bankbox viewer-hide">
+  <button class="bank-toggle" onclick="toggleBankForm()">
+    <span>+ Saisir un déblocage banque</span>
+    <span id="bankArrow">▾</span>
+  </button>
+  <div class="bank-body" id="bankBody">
+    <div class="bank-sync">
+      <div class="bank-l">Débloqué banque réel <span class="bank-hint">(écran Situation CIC — pas le tableau d'amortissement)</span></div>
+      <div class="bank-sync-row">
+        <input type="number" step="0.01" min="0" class="bank-i" id="dbInput" placeholder="155924.72">
+        <button class="bank-sync-btn" onclick="updateDebBanque()">Mettre à jour</button>
+      </div>
+    </div>
+    <div class="bank-fields">
+      <div class="bank-g date"><div class="bank-l">Date</div><input type="date" class="bank-i" id="bdDate"></div>
+      <div class="bank-g"><div class="bank-l">Montant (€)</div><input type="number" step="0.01" min="0" class="bank-i" id="bdMontant" placeholder="0,00"></div>
+      <div class="bank-g grow"><div class="bank-l">Enveloppe</div><select class="bank-i" id="bdEnv"></select></div>
+      <div class="bank-g grow"><div class="bank-l">Libellé <span class="bank-hint">opt.</span></div><input type="text" class="bank-i" id="bdLib" placeholder="Fournisseur, facture..."></div>
+      <button class="bank-ok" onclick="doBankDeb()">Enregistrer le déblocage</button>
+    </div>
   </div>
 </div>
 
@@ -341,7 +386,7 @@ var CATS = {
 };
 
 var DEFAUT = [
-  { nom:"CONSTRUCTION",                    ht:97363.20,  ttc:127234.34, deb:74340.60,  cat:1 },
+  { nom:"CONSTRUCTION",                    ht:97363.20,  ttc:127234.34, deb:93485.32,  cat:1 },
   { nom:"ASSURANCE DO",                    ht:2336.72,   ttc:2337.00,   deb:2329.26,   cat:1 },
   { nom:"ARCHITECTE",                      ht:1060.00,   ttc:1060.00,   deb:1060.00,   cat:1 },
   { nom:"VIABILISATION",                   ht:3127.15,   ttc:3752.58,   deb:3752.58,   cat:1 },
@@ -456,6 +501,7 @@ async function init() {
     var logs = await sbGet("patma_log", "?order=created_at");
     S.log = logs || [];
 
+    await loadDebBanque();
     render();
     setSave("Chargé");
   } catch(e) {
@@ -474,28 +520,129 @@ function setSave(msg) { document.getElementById("gSave").textContent=msg; }
 
 // ─── RENDER KPI ──────────────────────────────────────
 function rKPI() {
-  // Total saisi toutes catégories (base du recoupement banque)
-  var totalDeb = S.envs.reduce(function(a,e){ return a+(e.deb||0); }, 0);
-  // Cat 1+2 = construction + frais annexes (vue "crédit consommé" du Hero)
+  // Cat 1+2 = déblocages financés par le crédit construction
   var c12 = S.envs.filter(function(e){ return e.cat===1 || e.cat===2; });
   var c12deb = c12.reduce(function(a,e){ return a+(e.deb||0); }, 0);
   // Cat 3 = fonds perso à récupérer / compte courant d'associé
   var c3 = S.envs.filter(function(e){ return e.cat===3; });
   var c3deb = c3.reduce(function(a,e){ return a+(e.deb||0); }, 0);
   var c3ttc = c3.reduce(function(a,e){ return a+(e.ttc||0); }, 0);
-  // Conso crédit (Hero) = part construction+frais sur le crédit signé
-  var pp = CREDIT>0 ? (c12deb/CREDIT*100) : 0;
-  // Recoupement banque : écart = débloqué réel banque - tout ce qui est saisi.
-  // Écart > 0 => des déblocages banque ne sont pas encore ventilés dans l'outil.
-  var ecart = DEB_BANQUE - totalDeb;
-  document.getElementById("kC").textContent  = f(CREDIT);
-  document.getElementById("kD").textContent  = f(c12deb);
-  document.getElementById("kP").textContent  = Math.round(pp)+"%";
+  // Hero = réalité banque : part du crédit déjà débloquée
+  var pp = CREDIT>0 ? (DEB_BANQUE/CREDIT*100) : 0;
+  // Écart à ventiler = ce que la banque a débloqué - ce qui est saisi (Cat 1+2).
+  // À zéro => tous les déblocages crédit sont ventilés dans les enveloppes.
+  var ecart = DEB_BANQUE - c12deb;
   document.getElementById("kDB").textContent = f(DEB_BANQUE);
   document.getElementById("kRD").textContent = f(CREDIT - DEB_BANQUE);
+  document.getElementById("kC").textContent  = f(CREDIT);
+  document.getElementById("kP").textContent  = Math.round(pp)+"%";
+  document.getElementById("kS").textContent  = f(c12deb);
   document.getElementById("kEC").textContent = f(ecart);
   document.getElementById("kFP").textContent = f(c3deb)+" / "+f(c3ttc);
   document.getElementById("gf").style.width  = Math.min(pp,100)+"%";
+  // Écart proche de zéro -> vert, sinon orange/jaune (à ventiler)
+  document.getElementById("kEC").className = "g-stat-v " + (Math.abs(ecart) < 1 ? "g" : "w");
+}
+
+// ─── DÉBLOCAGE BANQUE : saisie rapide + MAJ du débloqué réel ──
+function toggleBankForm() {
+  if (!isAdmin()) return;
+  var b = document.getElementById("bankBody");
+  var on = b.classList.toggle("on");
+  document.getElementById("bankArrow").textContent = on ? "▴" : "▾";
+  if (on) {
+    fillBankEnvSelect();
+    var d = document.getElementById("bdDate");
+    if (!d.value) d.value = new Date().toISOString().split("T")[0];
+    document.getElementById("dbInput").value = DEB_BANQUE;
+  }
+}
+
+function fillBankEnvSelect() {
+  var html = "";
+  [1,2,3].forEach(function(c) {
+    var ces = S.envs.filter(function(e){ return e.cat===c; });
+    if (!ces.length) return;
+    html += "<optgroup label=\"" + CATS[c].nom + "\">";
+    ces.forEach(function(e) {
+      html += "<option value=\"" + e.id + "\">" + e.nom + "</option>";
+    });
+    html += "</optgroup>";
+  });
+  document.getElementById("bdEnv").innerHTML = html;
+}
+
+async function doBankDeb() {
+  if (!isAdmin()) return;
+  var id = parseInt(document.getElementById("bdEnv").value);
+  var a  = parseFloat(document.getElementById("bdMontant").value);
+  var d  = document.getElementById("bdDate").value;
+  var l  = document.getElementById("bdLib").value.trim();
+  if (!id) { alert("Choisir une enveloppe."); return; }
+  if (!a || a <= 0) { document.getElementById("bdMontant").focus(); return; }
+  if (!d) { alert("Date requise."); return; }
+  var e = S.envs.find(function(x){ return x.id===id; });
+  if (!e) return;
+  setSave("Sauvegarde...");
+  try {
+    var newDeb = (e.deb||0) + a;
+    await sbPatch("patma_enveloppes", id, { deb:newDeb });
+    await sbPost("patma_log", { type:"deb", nom:e.nom, montant:a, date:d, libelle:l, cat:e.cat });
+    e.deb = newDeb;
+    S.log.push({ type:"deb", nom:e.nom, montant:a, date:d, libelle:l, cat:e.cat });
+    document.getElementById("bdMontant").value = "";
+    document.getElementById("bdLib").value = "";
+    render();
+    if (histOpen) rHist();
+    setSave("Sauvegardé ✓");
+    showToast("✓  " + f(a,2) + " débloqués sur " + e.nom);
+  } catch(err) {
+    setSave("Erreur !");
+    alert("Erreur Supabase : " + err.message);
+  }
+}
+
+async function updateDebBanque() {
+  if (!isAdmin()) return;
+  var v = parseFloat(document.getElementById("dbInput").value);
+  if (isNaN(v) || v < 0) { alert("Montant invalide."); return; }
+  DEB_BANQUE = v;
+  try { localStorage.setItem("patma_deb_banque", String(v)); } catch(e) {}
+  setSave("Sauvegarde...");
+  try {
+    await saveDebBanque(v);
+    setSave("Sauvegardé ✓");
+  } catch(err) {
+    setSave("Enregistré (local)");
+  }
+  render();
+  showToast("Débloqué banque mis à jour : " + f(v,2));
+}
+
+// Persistance du débloqué banque : localStorage (toujours) + table patma_config (si elle existe)
+async function loadDebBanque() {
+  var local = null;
+  try { local = localStorage.getItem("patma_deb_banque"); } catch(e) {}
+  if (local !== null && local !== "" && !isNaN(parseFloat(local))) DEB_BANQUE = parseFloat(local);
+  try {
+    var rows = await sbGet("patma_config", "?key=eq.deb_banque");
+    if (rows && rows.length && rows[0].value != null && !isNaN(parseFloat(rows[0].value))) {
+      DEB_BANQUE = parseFloat(rows[0].value);
+      try { localStorage.setItem("patma_deb_banque", String(DEB_BANQUE)); } catch(e) {}
+    }
+  } catch(e) { /* table patma_config absente : on garde la valeur locale / la constante */ }
+}
+
+async function saveDebBanque(v) {
+  // Upsert dans patma_config (clé/valeur). Nécessite la table ; sinon l'appel échoue
+  // et la valeur reste enregistrée en local pour ce navigateur.
+  var r = await fetch(SB_URL + "/rest/v1/patma_config", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json", "apikey":SB_KEY, "Authorization":"Bearer "+SB_KEY, "Prefer":"resolution=merge-duplicates,return=representation" },
+    body:JSON.stringify([{ key:"deb_banque", value:v }])
+  });
+  if (!r.ok) throw new Error("config " + r.status);
+  return r.json();
 }
 
 // ─── RENDER MAIN ─────────────────────────────────────
