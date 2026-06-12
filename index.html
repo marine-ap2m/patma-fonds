@@ -249,19 +249,20 @@ body.role-viewer .viewer-only { display:block; }
   </div>
   <div class="g-hero">
     <div>
-      <div class="g-hero-l">Total débloqué</div>
+      <div class="g-hero-l">Crédit consommé</div>
       <div class="g-hero-v" id="kD">—</div>
       <div class="g-hero-sub">sur <b id="kC">—</b> de crédit signé</div>
     </div>
     <div class="g-hero-pct">
       <div class="g-hero-pct-v" id="kP">—</div>
-      <div class="g-hero-pct-l">Avancement</div>
+      <div class="g-hero-pct-l">Conso crédit</div>
     </div>
   </div>
   <div class="gbar"><div class="gfill" id="gf" style="width:0%"></div></div>
   <div class="g-stats">
-    <div class="g-stat"><div class="g-stat-l">Reste crédit</div><div class="g-stat-v w" id="kR">—</div></div>
-    <div class="g-stat"><div class="g-stat-l">Reste tréso perso</div><div class="g-stat-v p" id="kTP">—</div></div>
+    <div class="g-stat"><div class="g-stat-l">Débloqué banque</div><div class="g-stat-v" id="kDB">—</div></div>
+    <div class="g-stat"><div class="g-stat-l">Écart à investiguer</div><div class="g-stat-v w" id="kEC">—</div></div>
+    <div class="g-stat"><div class="g-stat-l">Fonds perso engagés</div><div class="g-stat-v p" id="kFP">—</div></div>
   </div>
 </div>
 
@@ -330,6 +331,7 @@ var SB_URL = "https://zhgqqaedtmeowpjadtqr.supabase.co";
 var SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpoZ3FxYWVkdG1lb3dwamFkdHFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMTIwODcsImV4cCI6MjA5MjY4ODA4N30.Sj2KiA4EHiZKVvotKlNSSQB3tATGutJRidm_O1WTFXI";
 
 var CREDIT = 224265.51;
+var DEB_BANQUE = 151853.70; // Capital débloqué par la banque (relevé tableau d'amortissement CIC)
 var CATS = {
   1:{ nom:"Construction",            hex:"#D4601C", bg:"#FBF0E8" },
   2:{ nom:"Frais annexes",           hex:"#1F62B0", bg:"#EAF1FC" },
@@ -470,20 +472,23 @@ function setSave(msg) { document.getElementById("gSave").textContent=msg; }
 
 // ─── RENDER KPI ──────────────────────────────────────
 function rKPI() {
-  var td = S.envs.reduce(function(a,e){ return a+(e.deb||0); }, 0);
-  var pp = CREDIT>0?(td/CREDIT*100):0;
-
-  // Reste tréso perso = Cat 3 TTC - Cat 3 débloqué
-  var c3envs = S.envs.filter(function(e){ return e.cat===3; });
-  var c3ttc  = c3envs.reduce(function(a,e){ return a+(e.ttc||0); }, 0);
-  var c3deb  = c3envs.reduce(function(a,e){ return a+(e.deb||0); }, 0);
-  var tresoPers = c3ttc - c3deb;
-
+  // Cat 1+2 = financées par le crédit
+  var c12 = S.envs.filter(function(e){ return e.cat===1 || e.cat===2; });
+  var c12deb = c12.reduce(function(a,e){ return a+(e.deb||0); }, 0);
+  // Cat 3 = fonds perso à récupérer
+  var c3 = S.envs.filter(function(e){ return e.cat===3; });
+  var c3deb = c3.reduce(function(a,e){ return a+(e.deb||0); }, 0);
+  var c3ttc = c3.reduce(function(a,e){ return a+(e.ttc||0); }, 0);
+  // Conso crédit
+  var pp = CREDIT>0 ? (c12deb/CREDIT*100) : 0;
+  // Écart entre ce que la banque a débloqué et ce qu'on a saisi
+  var ecart = DEB_BANQUE - c12deb;
   document.getElementById("kC").textContent  = f(CREDIT);
-  document.getElementById("kD").textContent  = f(td);
-  document.getElementById("kR").textContent  = f(CREDIT-td);
+  document.getElementById("kD").textContent  = f(c12deb);
   document.getElementById("kP").textContent  = Math.round(pp)+"%";
-  document.getElementById("kTP").textContent = f(tresoPers);
+  document.getElementById("kDB").textContent = f(DEB_BANQUE);
+  document.getElementById("kEC").textContent = f(ecart);
+  document.getElementById("kFP").textContent = f(c3deb)+" / "+f(c3ttc);
   document.getElementById("gf").style.width  = Math.min(pp,100)+"%";
 }
 
