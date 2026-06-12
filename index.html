@@ -29,12 +29,13 @@ body { font-family:Arial, sans-serif; background:#F5F4F0; color:#1A1A1A; min-hei
 .gfill { height:100%; background:linear-gradient(90deg,#C85A25,#E8916A); border-radius:6px; transition:width .5s; }
 
 /* SECONDARY KPI */
-.g-stats { display:flex; gap:10px; margin-top:13px; }
-.g-stat { flex:1; min-width:0; background:rgba(255,255,255,.06); border-radius:10px; padding:9px 12px; }
+.g-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:8px; margin-top:13px; }
+.g-stat { min-width:0; background:rgba(255,255,255,.06); border-radius:10px; padding:9px 12px; }
 .g-stat-l { font-size:9px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:rgba(255,255,255,.45); margin-bottom:4px; }
 .g-stat-v { font-size:17px; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .g-stat-v.w { color:#F9D77A; }
 .g-stat-v.p { color:#C8A8F0; }
+.g-stat-v.g { color:#6FD494; }
 
 /* LOADING */
 .loading { text-align:center; padding:60px 20px; color:#999; font-size:14px; }
@@ -261,7 +262,8 @@ body.role-viewer .viewer-only { display:block; }
   <div class="gbar"><div class="gfill" id="gf" style="width:0%"></div></div>
   <div class="g-stats">
     <div class="g-stat"><div class="g-stat-l">Débloqué banque</div><div class="g-stat-v" id="kDB">—</div></div>
-    <div class="g-stat"><div class="g-stat-l">Écart à investiguer</div><div class="g-stat-v w" id="kEC">—</div></div>
+    <div class="g-stat"><div class="g-stat-l">Reste à débloquer</div><div class="g-stat-v g" id="kRD">—</div></div>
+    <div class="g-stat"><div class="g-stat-l">Écart à ventiler</div><div class="g-stat-v w" id="kEC">—</div></div>
     <div class="g-stat"><div class="g-stat-l">Fonds perso engagés</div><div class="g-stat-v p" id="kFP">—</div></div>
   </div>
 </div>
@@ -331,7 +333,7 @@ var SB_URL = "https://zhgqqaedtmeowpjadtqr.supabase.co";
 var SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpoZ3FxYWVkdG1lb3dwamFkdHFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMTIwODcsImV4cCI6MjA5MjY4ODA4N30.Sj2KiA4EHiZKVvotKlNSSQB3tATGutJRidm_O1WTFXI";
 
 var CREDIT = 224265.51;
-var DEB_BANQUE = 151853.70; // Capital débloqué par la banque (relevé tableau d'amortissement CIC)
+var DEB_BANQUE = 155924.72; // "Déjà débloqué" — écran Situation du crédit CIC (PAS le tableau d'amortissement, qui est une projection). À relever à chaque mise à jour.
 var CATS = {
   1:{ nom:"Construction",            hex:"#D4601C", bg:"#FBF0E8" },
   2:{ nom:"Frais annexes",           hex:"#1F62B0", bg:"#EAF1FC" },
@@ -472,21 +474,25 @@ function setSave(msg) { document.getElementById("gSave").textContent=msg; }
 
 // ─── RENDER KPI ──────────────────────────────────────
 function rKPI() {
-  // Cat 1+2 = financées par le crédit
+  // Total saisi toutes catégories (base du recoupement banque)
+  var totalDeb = S.envs.reduce(function(a,e){ return a+(e.deb||0); }, 0);
+  // Cat 1+2 = construction + frais annexes (vue "crédit consommé" du Hero)
   var c12 = S.envs.filter(function(e){ return e.cat===1 || e.cat===2; });
   var c12deb = c12.reduce(function(a,e){ return a+(e.deb||0); }, 0);
-  // Cat 3 = fonds perso à récupérer
+  // Cat 3 = fonds perso à récupérer / compte courant d'associé
   var c3 = S.envs.filter(function(e){ return e.cat===3; });
   var c3deb = c3.reduce(function(a,e){ return a+(e.deb||0); }, 0);
   var c3ttc = c3.reduce(function(a,e){ return a+(e.ttc||0); }, 0);
-  // Conso crédit
+  // Conso crédit (Hero) = part construction+frais sur le crédit signé
   var pp = CREDIT>0 ? (c12deb/CREDIT*100) : 0;
-  // Écart entre ce que la banque a débloqué et ce qu'on a saisi
-  var ecart = DEB_BANQUE - c12deb;
+  // Recoupement banque : écart = débloqué réel banque - tout ce qui est saisi.
+  // Écart > 0 => des déblocages banque ne sont pas encore ventilés dans l'outil.
+  var ecart = DEB_BANQUE - totalDeb;
   document.getElementById("kC").textContent  = f(CREDIT);
   document.getElementById("kD").textContent  = f(c12deb);
   document.getElementById("kP").textContent  = Math.round(pp)+"%";
   document.getElementById("kDB").textContent = f(DEB_BANQUE);
+  document.getElementById("kRD").textContent = f(CREDIT - DEB_BANQUE);
   document.getElementById("kEC").textContent = f(ecart);
   document.getElementById("kFP").textContent = f(c3deb)+" / "+f(c3ttc);
   document.getElementById("gf").style.width  = Math.min(pp,100)+"%";
