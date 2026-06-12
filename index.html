@@ -2,14 +2,24 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>PATMA · Fonds</title>
+<meta name="theme-color" content="#1C2B27">
+<meta name="description" content="Suivi du déblocage des fonds du crédit construction PATMA">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PATMA Fonds">
+<meta name="format-detection" content="telephone=no">
 <style>
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
 body { font-family:Arial, sans-serif; background:#F5F4F0; color:#1A1A1A; min-height:100vh; }
 
 /* GLOBAL */
-.global { background:#1C2B27; padding:18px 20px 18px; position:sticky; top:0; z-index:50; }
+.global { background:#1C2B27; padding:calc(18px + env(safe-area-inset-top)) 20px 18px; position:sticky; top:0; z-index:50; }
 .global-title { color:#fff; font-size:15px; font-weight:700; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px; }
 .global-title span { color:#E8916A; font-weight:300; }
 .g-save { font-size:10px; color:rgba(255,255,255,.35); font-weight:400; }
@@ -167,7 +177,7 @@ select.eef-i { appearance:none; background-image:url("data:image/svg+xml,%3Csvg 
 .hta { background:#E5F4EC; color:#257A42; }
 
 /* ACTIONS BAS */
-.bottom-actions { max-width:720px; margin:0 auto; padding:10px 14px 32px; display:flex; gap:8px; flex-wrap:wrap; }
+.bottom-actions { max-width:720px; margin:0 auto; padding:10px 14px calc(32px + env(safe-area-inset-bottom)); display:flex; gap:8px; flex-wrap:wrap; }
 .ba-btn { padding:10px 16px; border-radius:8px; font-family:Arial,sans-serif; font-size:12px; font-weight:700; cursor:pointer; border:1.5px solid #DDD; background:#fff; color:#555; transition:all .15s; }
 .ba-btn:hover { background:#F5F4F0; }
 .ba-btn.danger { background:#FEE2E2; color:#C01C1C; border-color:#FECACA; }
@@ -210,14 +220,6 @@ body.role-viewer .env-main { cursor:default; }
 .viewer-only { display:none; }
 body.role-viewer .viewer-only { display:block; }
 
-/* NOTE PATRICE */
-.note-box { max-width:720px; margin:0 auto 14px; padding:0 14px; }
-.note-card { background:#fff; border-radius:12px; padding:14px 16px; box-shadow:0 2px 8px rgba(0,0,0,.06); border-left:4px solid #1F62B0; }
-.note-card h3 { font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#1F62B0; margin-bottom:8px; }
-.note-i { width:100%; min-height:64px; padding:10px 12px; border:1.5px solid #DDD; border-radius:8px; font-family:Arial,sans-serif; font-size:14px; resize:vertical; color:#1A1A1A; }
-.note-i:focus { outline:none; border-color:#1F62B0; }
-.note-send { margin-top:8px; padding:9px 16px; border:none; border-radius:8px; background:#1F62B0; color:#fff; font-family:Arial,sans-serif; font-size:13px; font-weight:700; cursor:pointer; }
-.note-send:hover { background:#164E8E; }
 .htn { background:#EAF1FC; color:#1F62B0; }
 
 /* SAISIE DÉBLOCAGE BANQUE */
@@ -315,15 +317,6 @@ select.bank-i { appearance:none; cursor:pointer; }
 
 <!-- MAIN -->
 <div class="main" id="main"><div class="loading">Chargement des données</div></div>
-
-<!-- NOTE POUR MARINE (mode consultation) -->
-<div class="note-box viewer-only" id="noteBox">
-  <div class="note-card">
-    <h3>Laisser un mot à Marine</h3>
-    <textarea class="note-i" id="noteInput" placeholder="Une question, une info, une remarque…"></textarea>
-    <button class="note-send" onclick="sendNote()">Envoyer</button>
-  </div>
-</div>
 
 <!-- HISTORIQUE -->
 <div class="hist-section">
@@ -914,26 +907,6 @@ async function doReset() {
     openForms = {};
     render();
     setSave("Réinitialisé ✓");
-  } catch(err) {
-    setSave("Erreur !");
-    alert("Erreur Supabase : "+err.message);
-  }
-}
-
-// ─── MESSAGE DE PATRICE ──────────────────────────────
-async function sendNote() {
-  var ta = document.getElementById("noteInput");
-  var txt = ta.value.trim();
-  if (!txt) { ta.focus(); return; }
-  setSave("Envoi...");
-  try {
-    var entry = { type:"note", nom:"PATRICE", montant:0, date:new Date().toISOString().split("T")[0], libelle:txt, cat:1 };
-    await sbPost("patma_log", entry);
-    S.log.push(entry);
-    ta.value = "";
-    if (histOpen) rHist();
-    setSave("Envoyé ✓");
-    showToast("✓  Message transmis à Marine");
   } catch(err) {
     setSave("Erreur !");
     alert("Erreur Supabase : "+err.message);
