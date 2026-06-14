@@ -177,7 +177,7 @@ select.eef-i { appearance:none; background-image:url("data:image/svg+xml,%3Csvg 
 .hta { background:#E5F4EC; color:#257A42; }
 
 /* ACTIONS BAS */
-.bottom-actions { max-width:720px; margin:0 auto; padding:10px 14px calc(32px + env(safe-area-inset-bottom)); display:flex; gap:8px; flex-wrap:wrap; }
+.bottom-actions { max-width:720px; margin:0 auto; padding:10px 14px calc(96px + env(safe-area-inset-bottom)); display:flex; gap:8px; flex-wrap:wrap; }
 .ba-btn { padding:10px 16px; border-radius:8px; font-family:Arial,sans-serif; font-size:12px; font-weight:700; cursor:pointer; border:1.5px solid #DDD; background:#fff; color:#555; transition:all .15s; }
 .ba-btn:hover { background:#F5F4F0; }
 .ba-btn.danger { background:#FEE2E2; color:#C01C1C; border-color:#FECACA; }
@@ -305,6 +305,11 @@ select.sheet-i { appearance:none; cursor:pointer; background-image:url("data:ima
 .g-stat-v.cc2 { color:#9DBFF0; }
 .g-stat-v.cc3 { color:#6FD494; }
 .g-stat-l { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+/* Bouton flottant de saisie (FAB) */
+.fab { position:fixed; right:16px; bottom:calc(18px + env(safe-area-inset-bottom)); z-index:700; background:#D4601C; color:#fff; border:none; border-radius:30px; padding:15px 22px; font-family:Arial,sans-serif; font-size:16px; font-weight:700; box-shadow:0 6px 20px rgba(200,90,37,.5); cursor:pointer; }
+.fab:active { transform:scale(.96); }
+.env-btn.env-edit { font-size:18px; font-weight:400; }
 </style>
 </head>
 <body>
@@ -353,13 +358,8 @@ select.sheet-i { appearance:none; cursor:pointer; background-image:url("data:ima
   </div>
 </div>
 
-<!-- SAISIE DÉBLOCAGE BANQUE (admin) -->
-<div class="bankbox viewer-hide">
-  <button class="bank-toggle" onclick="openBankForm()">
-    <span>+ Saisir un déblocage</span>
-    <span>＋</span>
-  </button>
-</div>
+<!-- BOUTON FLOTTANT : saisir un déblocage (admin) -->
+<button class="fab viewer-hide" onclick="openBankForm()" title="Saisir un déblocage">＋ Déblocage</button>
 
 <!-- FEUILLE PLEIN ÉCRAN : saisie déblocage (admin) -->
 <div class="sheet viewer-hide" id="bankSheet">
@@ -673,31 +673,18 @@ function rMain() {
       var bw = Math.min(Math.abs(p),100);
       var badge = s==="done"?"<span class='bdg bd'>Soldé</span>":s==="over"?"<span class='bdg bo'>Dépassé</span>":"";
       var rowCls = "env-row cat-"+c+(s==="done"?" done":"")+(s==="over"?" over":"");
-      var debOpen  = openForms[e.id]==="deb";
       var editOpen = openForms[e.id]==="edit";
-      var today    = new Date().toISOString().split("T")[0];
 
       html += "<div class='"+rowCls+"' id='row-"+e.id+"'>";
 
-      // Ligne principale
-      html += "<div class='env-main' onclick='toggleDeb("+e.id+")'>";
+      // Ligne principale : tap = saisir un déblocage (feuille, enveloppe présélectionnée)
+      html += "<div class='env-main' onclick='quickDeb("+e.id+")'>";
       html += "<div class='env-left'>";
       html += "<div class='env-nom'>"+e.nom+badge+"</div>";
       html += "<div class='env-bar'><div class='env-fill' style='width:"+bw+"%'></div></div>";
       html += "</div>";
       html += "<div class='env-right'><div class='env-reste-l'>Reste</div><div class='env-reste-v'>"+f(r)+"</div><div class='env-pp'>"+p+"%</div></div>";
-      html += "<button class='env-btn viewer-hide"+(debOpen?" open":"")+"' onclick='toggleDeb("+e.id+");event.stopPropagation()' title='Débloquer'>+</button>";
-      html += "</div>";
-
-      // Formulaire déblocage inline
-      html += "<div class='env-form"+(debOpen?" on":"")+"' id='form-"+e.id+"'>";
-      html += "<div class='ef-row'>";
-      html += "<div class='ef-g date'><div class='ef-l'>Date</div><input type='date' class='ef-i' id='di-"+e.id+"' value='"+today+"'></div>";
-      html += "<div class='ef-g grow'><div class='ef-l'>Montant TTC (€)</div><input type='number' class='ef-i' id='ai-"+e.id+"' step='0.01' min='0' placeholder='0,00' onkeydown='if(event.key===\"Enter\")doDeb("+e.id+")'></div>";
-      html += "<div class='ef-g grow'><div class='ef-l'>Libellé <span style='font-size:8px;font-weight:400;text-transform:none;letter-spacing:0'>opt.</span></div><input type='text' class='ef-i' id='li-"+e.id+"' placeholder='Facture...' onkeydown='if(event.key===\"Enter\")doDeb("+e.id+")'></div>";
-      html += "<button class='ef-ok' onclick='doDeb("+e.id+")'>Débloquer</button>";
-      html += "</div>";
-      html += "<div class='ef-edit viewer-hide'><button class='ef-edit-btn' onclick='toggleEdit("+e.id+");event.stopPropagation()'>✎ Modifier l'enveloppe</button></div>";
+      html += "<button class='env-btn env-edit viewer-hide"+(editOpen?" open":"")+"' onclick='toggleEdit("+e.id+");event.stopPropagation()' title='Modifier'>✎</button>";
       html += "</div>";
 
       // Formulaire modification inline
@@ -728,14 +715,6 @@ function rMain() {
   });
 
   document.getElementById("main").innerHTML = html;
-
-  // Auto-focus
-  Object.keys(openForms).forEach(function(id) {
-    if (openForms[id]==="deb") {
-      var inp = document.getElementById("ai-"+id);
-      if (inp) setTimeout(function(){ inp.focus(); }, 80);
-    }
-  });
 }
 
 function render() { rKPI(); rMain(); }
@@ -746,48 +725,23 @@ function toggleCat(c) {
   render();
 }
 
-// ─── TOGGLE FORMS ────────────────────────────────────
-function toggleDeb(id) {
+// ─── SAISIE RAPIDE : ouvre la feuille avec l'enveloppe présélectionnée ──
+function quickDeb(id) {
   if (!isAdmin()) return;
-  var cur = openForms[id];
-  openForms = {};
-  openForms[id] = (cur==="deb") ? null : "deb";
-  render();
+  openBankForm();
+  var sel = document.getElementById("bdEnv");
+  if (sel) sel.value = id;
+  var m = document.getElementById("bdMontant");
+  if (m) setTimeout(function(){ m.focus(); }, 90);
 }
+
+// ─── TOGGLE FORMS ────────────────────────────────────
 function toggleEdit(id) {
   if (!isAdmin()) return;
   var cur = openForms[id];
   openForms = {};
   openForms[id] = (cur==="edit") ? null : "edit";
   render();
-}
-
-// ─── DÉBLOQUER ───────────────────────────────────────
-async function doDeb(id) {
-  if (!isAdmin()) return;
-  var a = parseFloat(document.getElementById("ai-"+id).value);
-  var d = document.getElementById("di-"+id).value;
-  var l = document.getElementById("li-"+id).value.trim();
-  if (!a||a<=0) { document.getElementById("ai-"+id).focus(); return; }
-  if (!d) { alert("Date requise."); return; }
-  var e = S.envs.find(function(x){ return x.id===id; });
-  if (!e) return;
-
-  setSave("Sauvegarde...");
-  try {
-    var newDeb = (e.deb||0) + a;
-    await sbPatch("patma_enveloppes", id, { deb: newDeb });
-    await sbPost("patma_log", { type:"deb", nom:e.nom, montant:a, date:d, libelle:l, cat:e.cat });
-    e.deb = newDeb;
-    S.log.push({ type:"deb", nom:e.nom, montant:a, date:d, libelle:l, cat:e.cat });
-    openForms = {};
-    render();
-    setSave("Sauvegardé ✓");
-    showToast("✓  "+f(a,2)+" débloqués sur "+e.nom);
-  } catch(err) {
-    setSave("Erreur !");
-    alert("Erreur Supabase : "+err.message);
-  }
 }
 
 // ─── MODIFIER ────────────────────────────────────────
