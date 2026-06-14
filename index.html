@@ -286,8 +286,6 @@ select.sheet-i { appearance:none; cursor:pointer; background-image:url("data:ima
 .sheet-big { font-size:24px; font-weight:700; text-align:center; }
 .sheet-ok { width:100%; padding:17px; border:none; border-radius:12px; background:#D4601C; color:#fff; font-family:Arial,sans-serif; font-size:17px; font-weight:700; cursor:pointer; margin-top:4px; }
 .sheet-ok:active { transform:scale(.98); }
-.sheet-sync { background:#fff; border:1.5px solid #E5F4EC; border-radius:14px; padding:14px; margin-bottom:22px; }
-.sheet-sync-btn { width:100%; padding:13px; border:none; border-radius:10px; background:#257A42; color:#fff; font-family:Arial,sans-serif; font-size:15px; font-weight:700; cursor:pointer; margin-top:10px; }
 .sheet-note { font-size:11px; color:#999; margin-top:7px; line-height:1.4; }
 
 /* Historique en liste mobile */
@@ -370,13 +368,6 @@ select.sheet-i { appearance:none; cursor:pointer; background-image:url("data:ima
     <button class="sheet-x" onclick="closeBankForm()">✕</button>
   </div>
   <div class="sheet-body">
-    <div class="sheet-sync">
-      <label class="sheet-l">Débloqué banque réel</label>
-      <input type="number" inputmode="decimal" step="0.01" min="0" class="sheet-i sheet-big" id="dbInput" placeholder="155924.72">
-      <button class="sheet-sync-btn" onclick="updateDebBanque()">Mettre à jour le débloqué banque</button>
-      <div class="sheet-note">À relever sur l'écran « Situation » du crédit CIC — jamais sur le tableau d'amortissement.</div>
-    </div>
-
     <div class="sheet-g"><label class="sheet-l">Date</label><input type="date" class="sheet-i" id="bdDate"></div>
     <div class="sheet-g"><label class="sheet-l">Montant (€)</label><input type="number" inputmode="decimal" step="0.01" min="0" class="sheet-i sheet-big" id="bdMontant" placeholder="0,00"></div>
     <div class="sheet-g"><label class="sheet-l">Enveloppe</label><select class="sheet-i" id="bdEnv"></select></div>
@@ -436,7 +427,6 @@ var SB_URL = "https://zhgqqaedtmeowpjadtqr.supabase.co";
 var SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpoZ3FxYWVkdG1lb3dwamFkdHFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMTIwODcsImV4cCI6MjA5MjY4ODA4N30.Sj2KiA4EHiZKVvotKlNSSQB3tATGutJRidm_O1WTFXI";
 
 var CREDIT = 224265.51;
-var DEB_BANQUE = 155924.72; // "Déjà débloqué" — écran Situation du crédit CIC (PAS le tableau d'amortissement, qui est une projection). À relever à chaque mise à jour.
 var CATS = {
   1:{ nom:"Construction",            hex:"#D4601C", bg:"#FBF0E8" },
   2:{ nom:"Frais annexes",           hex:"#1F62B0", bg:"#EAF1FC" },
@@ -559,7 +549,6 @@ async function init() {
     var logs = await sbGet("patma_log", "?order=created_at");
     S.log = logs || [];
 
-    await loadDebBanque();
     render();
     setSave("Chargé");
   } catch(e) {
@@ -578,11 +567,12 @@ function setSave(msg) { document.getElementById("gSave").textContent=msg; }
 
 // ─── RENDER KPI ──────────────────────────────────────
 function rKPI() {
-  // Vue crédit : ce qu'il reste à tirer sur le crédit signé
-  var dispo = CREDIT - DEB_BANQUE;                       // reste à débloquer
-  var pp = CREDIT>0 ? (DEB_BANQUE/CREDIT*100) : 0;       // crédit utilisé
+  // Débloqué = somme des déblocages saisis dans les enveloppes
+  var totalDeb = S.envs.reduce(function(a,e){ return a+(e.deb||0); }, 0);
+  var dispo = CREDIT - totalDeb;                         // reste à débloquer
+  var pp = CREDIT>0 ? (totalDeb/CREDIT*100) : 0;         // crédit utilisé
   document.getElementById("kRD").textContent = f(dispo);
-  document.getElementById("kDB").textContent = f(DEB_BANQUE);
+  document.getElementById("kDB").textContent = f(totalDeb);
   document.getElementById("kC").textContent  = f(CREDIT);
   document.getElementById("kP").textContent  = Math.round(pp)+"%";
   document.getElementById("gf").style.width  = Math.min(pp,100)+"%";
@@ -596,13 +586,12 @@ function rKPI() {
   });
 }
 
-// ─── DÉBLOCAGE BANQUE : feuille plein écran + MAJ du débloqué réel ──
+// ─── DÉBLOCAGE : feuille plein écran ──
 function openBankForm() {
   if (!isAdmin()) return;
   fillBankEnvSelect();
   var d = document.getElementById("bdDate");
   if (!d.value) d.value = new Date().toISOString().split("T")[0];
-  document.getElementById("dbInput").value = DEB_BANQUE;
   document.getElementById("bankSheet").classList.add("on");
   document.body.style.overflow = "hidden";
 }
@@ -653,49 +642,6 @@ async function doBankDeb() {
     setSave("Erreur !");
     alert("Erreur Supabase : " + err.message);
   }
-}
-
-async function updateDebBanque() {
-  if (!isAdmin()) return;
-  var v = parseFloat(document.getElementById("dbInput").value);
-  if (isNaN(v) || v < 0) { alert("Montant invalide."); return; }
-  DEB_BANQUE = v;
-  try { localStorage.setItem("patma_deb_banque", String(v)); } catch(e) {}
-  setSave("Sauvegarde...");
-  try {
-    await saveDebBanque(v);
-    setSave("Sauvegardé ✓");
-  } catch(err) {
-    setSave("Enregistré (local)");
-  }
-  render();
-  showToast("Débloqué banque mis à jour : " + f(v,2));
-}
-
-// Persistance du débloqué banque : localStorage (toujours) + table patma_config (si elle existe)
-async function loadDebBanque() {
-  var local = null;
-  try { local = localStorage.getItem("patma_deb_banque"); } catch(e) {}
-  if (local !== null && local !== "" && !isNaN(parseFloat(local))) DEB_BANQUE = parseFloat(local);
-  try {
-    var rows = await sbGet("patma_config", "?key=eq.deb_banque");
-    if (rows && rows.length && rows[0].value != null && !isNaN(parseFloat(rows[0].value))) {
-      DEB_BANQUE = parseFloat(rows[0].value);
-      try { localStorage.setItem("patma_deb_banque", String(DEB_BANQUE)); } catch(e) {}
-    }
-  } catch(e) { /* table patma_config absente : on garde la valeur locale / la constante */ }
-}
-
-async function saveDebBanque(v) {
-  // Upsert dans patma_config (clé/valeur). Nécessite la table ; sinon l'appel échoue
-  // et la valeur reste enregistrée en local pour ce navigateur.
-  var r = await fetch(SB_URL + "/rest/v1/patma_config", {
-    method:"POST",
-    headers:{ "Content-Type":"application/json", "apikey":SB_KEY, "Authorization":"Bearer "+SB_KEY, "Prefer":"resolution=merge-duplicates,return=representation" },
-    body:JSON.stringify([{ key:"deb_banque", value:v }])
-  });
-  if (!r.ok) throw new Error("config " + r.status);
-  return r.json();
 }
 
 // ─── RENDER MAIN ─────────────────────────────────────
