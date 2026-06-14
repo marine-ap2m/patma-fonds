@@ -300,6 +300,13 @@ select.sheet-i { appearance:none; cursor:pointer; background-image:url("data:ima
 .hcard-amt { margin-left:auto; font-size:15px; font-weight:700; color:#1A1A1A; }
 .hcard-nom { font-size:14px; font-weight:600; display:flex; align-items:center; }
 .hcard-lib { font-size:12px; color:#888; margin-top:3px; }
+
+/* KPI par catégorie */
+.g-stat-sub { font-size:10px; color:rgba(255,255,255,.45); font-weight:600; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.g-stat-v.cc1 { color:#E8916A; }
+.g-stat-v.cc2 { color:#9DBFF0; }
+.g-stat-v.cc3 { color:#6FD494; }
+.g-stat-l { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 </style>
 </head>
 <body>
@@ -331,20 +338,20 @@ select.sheet-i { appearance:none; cursor:pointer; background-image:url("data:ima
   </div>
   <div class="g-hero">
     <div>
-      <div class="g-hero-l">Débloqué par la banque</div>
-      <div class="g-hero-v" id="kDB">—</div>
-      <div class="g-hero-sub">reste <b id="kRD">—</b> à débloquer · crédit <b id="kC">—</b></div>
+      <div class="g-hero-l">Reste à débloquer sur le crédit</div>
+      <div class="g-hero-v" id="kRD">—</div>
+      <div class="g-hero-sub">débloqué <b id="kDB">—</b> sur <b id="kC">—</b></div>
     </div>
     <div class="g-hero-pct">
       <div class="g-hero-pct-v" id="kP">—</div>
-      <div class="g-hero-pct-l">du crédit</div>
+      <div class="g-hero-pct-l">crédit utilisé</div>
     </div>
   </div>
   <div class="gbar"><div class="gfill" id="gf" style="width:0%"></div></div>
   <div class="g-stats">
-    <div class="g-stat"><div class="g-stat-l">Saisi dans l'outil</div><div class="g-stat-v" id="kS">—</div></div>
-    <div class="g-stat"><div class="g-stat-l">Écart à ventiler</div><div class="g-stat-v w" id="kEC">—</div></div>
-    <div class="g-stat"><div class="g-stat-l">Fonds perso engagés</div><div class="g-stat-v p" id="kFP">—</div></div>
+    <div class="g-stat"><div class="g-stat-l">Construction &amp; travaux</div><div class="g-stat-v cc1" id="kC1">—</div><div class="g-stat-sub" id="kC1s">—</div></div>
+    <div class="g-stat"><div class="g-stat-l">Frais annexes</div><div class="g-stat-v cc2" id="kC2">—</div><div class="g-stat-sub" id="kC2s">—</div></div>
+    <div class="g-stat"><div class="g-stat-l">Fonds perso à récupérer</div><div class="g-stat-v cc3" id="kC3">—</div><div class="g-stat-sub" id="kC3s">—</div></div>
   </div>
 </div>
 
@@ -571,28 +578,22 @@ function setSave(msg) { document.getElementById("gSave").textContent=msg; }
 
 // ─── RENDER KPI ──────────────────────────────────────
 function rKPI() {
-  // Cat 1+2 = déblocages financés par le crédit construction
-  var c12 = S.envs.filter(function(e){ return e.cat===1 || e.cat===2; });
-  var c12deb = c12.reduce(function(a,e){ return a+(e.deb||0); }, 0);
-  // Cat 3 = fonds perso à récupérer / compte courant d'associé
-  var c3 = S.envs.filter(function(e){ return e.cat===3; });
-  var c3deb = c3.reduce(function(a,e){ return a+(e.deb||0); }, 0);
-  var c3ttc = c3.reduce(function(a,e){ return a+(e.ttc||0); }, 0);
-  // Hero = réalité banque : part du crédit déjà débloquée
-  var pp = CREDIT>0 ? (DEB_BANQUE/CREDIT*100) : 0;
-  // Écart à ventiler = ce que la banque a débloqué - ce qui est saisi (Cat 1+2).
-  // À zéro => tous les déblocages crédit sont ventilés dans les enveloppes.
-  var ecart = DEB_BANQUE - c12deb;
+  // Vue crédit : ce qu'il reste à tirer sur le crédit signé
+  var dispo = CREDIT - DEB_BANQUE;                       // reste à débloquer
+  var pp = CREDIT>0 ? (DEB_BANQUE/CREDIT*100) : 0;       // crédit utilisé
+  document.getElementById("kRD").textContent = f(dispo);
   document.getElementById("kDB").textContent = f(DEB_BANQUE);
-  document.getElementById("kRD").textContent = f(CREDIT - DEB_BANQUE);
   document.getElementById("kC").textContent  = f(CREDIT);
   document.getElementById("kP").textContent  = Math.round(pp)+"%";
-  document.getElementById("kS").textContent  = f(c12deb);
-  document.getElementById("kEC").textContent = f(ecart);
-  document.getElementById("kFP").textContent = f(c3deb)+" / "+f(c3ttc);
   document.getElementById("gf").style.width  = Math.min(pp,100)+"%";
-  // Écart proche de zéro -> vert, sinon orange/jaune (à ventiler)
-  document.getElementById("kEC").className = "g-stat-v " + (Math.abs(ecart) < 1 ? "g" : "w");
+  // Détail par catégorie : reste à payer + % déjà débloqué
+  [1,2,3].forEach(function(c){
+    var ces = S.envs.filter(function(e){ return e.cat===c; });
+    var ttc = ces.reduce(function(a,e){ return a+(e.ttc||0); }, 0);
+    var deb = ces.reduce(function(a,e){ return a+(e.deb||0); }, 0);
+    document.getElementById("kC"+c).textContent   = f(ttc-deb);
+    document.getElementById("kC"+c+"s").textContent = pct(deb,ttc)+"% débloqué";
+  });
 }
 
 // ─── DÉBLOCAGE BANQUE : feuille plein écran + MAJ du débloqué réel ──
