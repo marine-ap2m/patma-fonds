@@ -310,6 +310,12 @@ select.sheet-i { appearance:none; cursor:pointer; background-image:url("data:ima
 .fab { position:fixed; right:16px; bottom:calc(18px + env(safe-area-inset-bottom)); z-index:700; background:#D4601C; color:#fff; border:none; border-radius:30px; padding:15px 22px; font-family:Arial,sans-serif; font-size:16px; font-weight:700; box-shadow:0 6px 20px rgba(200,90,37,.5); cursor:pointer; }
 .fab:active { transform:scale(.96); }
 .env-btn.env-edit { font-size:18px; font-weight:400; }
+
+/* Champ référence "déjà débloqué banque" dans la feuille */
+.sheet-ref { margin-top:26px; padding-top:18px; border-top:1px dashed #DDD; }
+.sheet-refhint { text-transform:none; letter-spacing:0; color:#bbb; font-weight:400; }
+.sheet-ref-row { display:flex; gap:8px; }
+.sheet-ref-btn { flex-shrink:0; padding:0 20px; border:none; border-radius:12px; background:#257A42; color:#fff; font-family:Arial,sans-serif; font-size:16px; font-weight:700; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -373,6 +379,15 @@ select.sheet-i { appearance:none; cursor:pointer; background-image:url("data:ima
     <div class="sheet-g"><label class="sheet-l">Enveloppe</label><select class="sheet-i" id="bdEnv"></select></div>
     <div class="sheet-g"><label class="sheet-l">Libellé (optionnel)</label><input type="text" class="sheet-i" id="bdLib" placeholder="Fournisseur, facture..."></div>
     <button class="sheet-ok" onclick="doBankDeb()">Enregistrer le déblocage</button>
+
+    <div class="sheet-ref">
+      <label class="sheet-l">Déjà débloqué banque — référence <span class="sheet-refhint">(écran Situation CIC · à régler une seule fois)</span></label>
+      <div class="sheet-ref-row">
+        <input type="number" inputmode="decimal" step="0.01" min="0" class="sheet-i" id="dbInput" placeholder="155924.72">
+        <button class="sheet-ref-btn" onclick="setDebBanque()">OK</button>
+      </div>
+      <div class="sheet-note">Ensuite, chaque déblocage saisi ci-dessus l'incrémente tout seul — pas de double saisie.</div>
+    </div>
   </div>
 </div>
 
@@ -427,6 +442,7 @@ var SB_URL = "https://zhgqqaedtmeowpjadtqr.supabase.co";
 var SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpoZ3FxYWVkdG1lb3dwamFkdHFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMTIwODcsImV4cCI6MjA5MjY4ODA4N30.Sj2KiA4EHiZKVvotKlNSSQB3tATGutJRidm_O1WTFXI";
 
 var CREDIT = 224265.51;
+var DEB_BANQUE = 155924.72; // Déjà débloqué banque (écran Situation CIC). Sert de référence au "reste à débloquer". Réglable une fois, puis incrémenté à chaque déblocage saisi.
 var CATS = {
   1:{ nom:"Construction",            hex:"#D4601C", bg:"#FBF0E8" },
   2:{ nom:"Frais annexes",           hex:"#1F62B0", bg:"#EAF1FC" },
@@ -537,6 +553,7 @@ function logout() {
 
 // ─── INITIALISATION ──────────────────────────────────
 async function init() {
+  loadDebBanque();
   try {
     var envs = await sbGet("patma_enveloppes", "?order=id");
     if (!envs || envs.length === 0) {
@@ -567,12 +584,11 @@ function setSave(msg) { document.getElementById("gSave").textContent=msg; }
 
 // ─── RENDER KPI ──────────────────────────────────────
 function rKPI() {
-  // Débloqué = somme des déblocages saisis dans les enveloppes
-  var totalDeb = S.envs.reduce(function(a,e){ return a+(e.deb||0); }, 0);
-  var dispo = CREDIT - totalDeb;                         // reste à débloquer
-  var pp = CREDIT>0 ? (totalDeb/CREDIT*100) : 0;         // crédit utilisé
+  // Reste à débloquer = crédit − déjà débloqué banque (chiffre exact, pas la somme des enveloppes)
+  var dispo = CREDIT - DEB_BANQUE;                       // reste à débloquer
+  var pp = CREDIT>0 ? (DEB_BANQUE/CREDIT*100) : 0;       // crédit utilisé
   document.getElementById("kRD").textContent = f(dispo);
-  document.getElementById("kDB").textContent = f(totalDeb);
+  document.getElementById("kDB").textContent = f(DEB_BANQUE);
   document.getElementById("kC").textContent  = f(CREDIT);
   document.getElementById("kP").textContent  = Math.round(pp)+"%";
   document.getElementById("gf").style.width  = Math.min(pp,100)+"%";
@@ -592,6 +608,7 @@ function openBankForm() {
   fillBankEnvSelect();
   var d = document.getElementById("bdDate");
   if (!d.value) d.value = new Date().toISOString().split("T")[0];
+  document.getElementById("dbInput").value = DEB_BANQUE;
   document.getElementById("bankSheet").classList.add("on");
   document.body.style.overflow = "hidden";
 }
@@ -632,6 +649,10 @@ async function doBankDeb() {
     await sbPost("patma_log", { type:"deb", nom:e.nom, montant:a, date:d, libelle:l, cat:e.cat });
     e.deb = newDeb;
     S.log.push({ type:"deb", nom:e.nom, montant:a, date:d, libelle:l, cat:e.cat });
+    // Le déblocage incrémente aussi le "déjà débloqué banque" -> reste à jour, sans double saisie
+    DEB_BANQUE += a;
+    saveDebBanque(DEB_BANQUE);
+    var di = document.getElementById("dbInput"); if (di) di.value = DEB_BANQUE;
     document.getElementById("bdMontant").value = "";
     document.getElementById("bdLib").value = "";
     render();
@@ -642,6 +663,26 @@ async function doBankDeb() {
     setSave("Erreur !");
     alert("Erreur Supabase : " + err.message);
   }
+}
+
+// Régler la référence "déjà débloqué banque" (une fois) ; ensuite incrémentée auto
+function setDebBanque() {
+  if (!isAdmin()) return;
+  var v = parseFloat(document.getElementById("dbInput").value);
+  if (isNaN(v) || v < 0) { alert("Montant invalide."); return; }
+  DEB_BANQUE = v;
+  saveDebBanque(v);
+  render();
+  showToast("Référence banque réglée : " + f(v,2));
+}
+function saveDebBanque(v) {
+  try { localStorage.setItem("patma_deb_banque", String(v)); } catch(e) {}
+}
+function loadDebBanque() {
+  try {
+    var s = localStorage.getItem("patma_deb_banque");
+    if (s !== null && s !== "" && !isNaN(parseFloat(s))) DEB_BANQUE = parseFloat(s);
+  } catch(e) {}
 }
 
 // ─── RENDER MAIN ─────────────────────────────────────
